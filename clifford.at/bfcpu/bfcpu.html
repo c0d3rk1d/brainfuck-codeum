@@ -1,0 +1,67 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<html>
+
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+    <title>Clifford's Homepage - The Brainf*ck CPU</title>
+    <meta name="keywords" content="Brainf*ck CPU Brainfuck VHDL">
+
+</head>
+
+<body background="background.gif" link="#3333DD" vlink="#777777" bgcolor="#FFFFFF">
+    <h1 align="CENTER">The Brainf*ck CPU Project</h1>
+
+    <p align="center">
+        <b>Download the VHDL sources now: <a href="bfcpu-0.09.tar.gz">bfcpu-0.09.tar.gz</a></b>
+    </p>
+    <p>&nbsp;</p>
+
+    <p align="center">
+        <i>Hardware the world does not need: A CPU core than is executing<br>
+            Brainf*ck code directly in hardware without any software interpreter.</i>
+    </p>
+
+    <table cellpadding="10">
+        <tr>
+            <td valign="top">
+                <pre>                +---------------+
+                |               |
+      clk -----&gt;|               |----&gt; addr [15:0]
+      rst -----&gt;|               |
+                |  B F - C P U  |&lt;-- data_r [7:0]
+[7:0] data_o &lt;--|               |--&gt; data_w [7:0]
+      enab_o &lt;--|               |--&gt; enab_w
+                |    CW 6670    |
+[7:0] data_i --&gt;|               |
+      enab_i --&gt;|    CW 6671    |
+      ackb_i &lt;--|               |
+                |               |
+                +---------------+</pre>
+            </td>
+            <td valign="top">
+                I've developed this hardware just to have a cool example for
+                hardware development in VHDL.
+                <p>
+                    Currently there are two revisions of the Brainf*ck CPU in existence:
+                    The CW6670 and the CW6671. While the CW6670 is a simple straight-forward
+                    implementation of a CPU executing native brainf*ck code, the CW6671 is
+                    an optimized version with an internal 1 byte data cache.
+                <p>
+                    The source archive contains a detailed README, the VHDL sources,
+                    a testbench, a Spartan-II based example implementation and demo
+                    Brainf*ck programs.
+                <p>
+                    <b>I've also developed a <a href="bfcomp.html">Brainf*ck Compiler</a>.</b>
+            </td>
+        </tr>
+    </table>
+
+    <h3 align="center">
+        I gave an introduction to HDL development at <a target="_top"
+            href="https://www.ccc.de/">20C3</a>. The slides
+        can be found <a href="slides.pdf">here</a>.
+    </h3>
+
+</body>
+
+</html>

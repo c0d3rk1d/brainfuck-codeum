@@ -1,0 +1,131 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<html>
+
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+    <title>Clifford's Homepage - Towers of Hanoi in Brainf*ck</title>
+    <meta name="keywords" content="Brainf*ck Brainfuck Towers of Hanoi">
+
+</head>
+
+<body background="background.gif" link="#3333DD" vlink="#777777"
+    bgcolor="#FFFFFF">
+    <h1 align="CENTER">Towers of Hanoi in Brainf*ck</h1>
+
+    <p />
+    &nbsp;
+    <p />
+
+    I've done an implementation of the well-known "Towers of Hanoi" problem in
+    Brainf*ck. The program features semi-graphical terminal output (see
+    screenshot) and does solve the problem by itself (i.e. it doesn't simply
+    output an hardcoded solution).
+
+    <p />
+
+    The program has been written using my <a href="bfcomp.html">Brainf*ck
+        Compiler Suite</a>. The bfc source can be found <a
+        href="../svn/hanoi.bfc">here</a> and the
+    compiled
+    Brainf*ck program <a href="hanoi.bf">here</a>.
+
+    <p />
+
+    <div align="center"><a href="hanoi_shot.jpg"><img border="0" hspace="10" vspace="10" alt="[Hanoi screenshot]"
+                src="hanoi_shot_mini.jpg"></a></div>
+
+    <p />
+    &nbsp;
+    <p />
+
+    Brainf*ck doesn't have real function calls and so it also does not allow
+    recursion. But "Towers of Hanoi" is a recursive problem, so I needed to
+    implement the algorithm with explicit stack/context management:
+
+    <p />
+
+    <table cellpadding="10" align="center">
+        <tr>
+            <td bgcolor="#ffffaa">
+                <pre>macro hanoi(from, other, to, num)
+{
+   var state, depth, tmp;
+   state, depth = 1;
+
+   while (depth) {
+      while _neq(state, 4)
+      {
+         if (num) {
+            var ctx_do_push = 0;
+            var state1, state3 = 0;
+
+            if _eq(state, 1) { ctx_do_push = 1; state1 = 1; }
+            if _eq(state, 3) { ctx_do_push = 1; state3 = 1; }
+
+            if (ctx_do_push)
+               ctx_push(from, other, to, num, state);
+
+            if (state1) {
+               tmp = other; other = to; to = tmp;
+               num -= 1; state = 0; depth += 1;
+            }
+
+            if (state3) {
+               tmp = other; other = from; from = tmp;
+               num -= 1; state = 0; depth += 1;
+            }
+         }
+
+         if _eq(state, 2)
+            move_slice(from, to);
+
+         state += 1;
+      }
+      depth -= 1;
+      if (depth) {
+         ctx_pop(from, other, to, num, state);
+         state += 1;
+      }
+   }
+}
+</pre>
+            </td>
+        </tr>
+    </table>
+
+    <p />
+
+    The macros <tt>ctx_push()</tt> and <tt>ctx_pop()</tt> push or pop their
+    arguments on a stack. So this does in fact the same thing as a recursive
+    function would do with it's local variables on the stack frame. The macro
+    <tt>move_slice()</tt> moves a slice from the <tt>from</tt> tower to the
+    <tt>to</tt> tower. Note that the expensive macros <tt>ctx_push()</tt>,
+    <tt>ctx_pop()</tt> and <tt>move_slice()</tt> are only inlined once each.
+
+    <p />
+
+    The same algorithm implemented recursively in perl reduces to:
+
+    <p />
+
+    <table cellpadding="10" align="center">
+        <tr>
+            <td bgcolor="#ffffaa">
+                <pre>sub hanoi($$$$) {
+	my ($from, $other, $to, $num) = @_;
+	hanoi($from, $to, $other, $num-1) if $num;
+	move_slice($from, $to);
+	hanoi($other, $from, $to, $num-1) if $num;
+}</pre>
+            </td>
+        </tr>
+    </table>
+
+    <p />The <a href="hanoi.bf">compiled Brainf*ck program</a> is about
+    64kB big and should run on a wide range of brainf*ck runtimes. The
+    terminal must be able to understand vt100 escape codes and the output
+    must be eighter unbuffered or auto-flushed at newline characters.
+
+</body>
+
+</html>
