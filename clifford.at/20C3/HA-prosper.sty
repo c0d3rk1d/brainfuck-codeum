@@ -1,0 +1,885 @@
+%==============================================================================
+%
+% HA-Prosper definitions file
+%
+% Created by: Hendri Adriaens
+%             http://center.uvt.nl/phd_stud/adriaens
+%             Center for Economic Research
+%             Tilburg University, the Netherlands
+%
+% Copyright (c) 2003-2004 Hendri Adriaens. All rights reserved.
+% 
+% This program may be distributed and/or modified under the
+% conditions of the LaTeX Project Public License, either version 1.2
+% of this license or (at your option) any later version.
+% The latest version of this license is in
+%   http://www.latex-project.org/lppl.txt
+% and version 1.2 or later is part of all distributions of LaTeX 
+% version 1999/12/01 or later.
+%
+% This program consists of the files listed in files.txt present in this package.
+%
+%==============================================================================
+
+\NeedsTeXFormat{LaTeX2e}[1995/12/01]
+\def\HAP@Version{v3.9}
+\ProvidesPackage{HA-prosper}[2004/02/23 \HAP@Version]
+\typeout{Using HA-prosper: a patch for prosper}
+\typeout{(c) 2003-2004 Hendri Adriaens, Tilburg, the Netherlands}
+\typeout{ }
+
+% Check compatibility to ppr-prv
+\def\PPRPRV@ReqVersion{v. 0.11}
+\ifx\PPRPRV@Version\undefined\else
+  \ifx\PPRPRV@ReqVersion\PPRPRV@Version\else
+    \PackageError{HA-prosper}{HA-prosper \HAP@Version\space and ppr-prv \PPRPRV@Version\space are incompatible}%
+    {Read the documentation of HA-prosper.}%
+  \fi
+\fi
+
+% Package options
+\newif\ifHAP@notes
+\newif\ifHAP@notesonly
+\newif\ifHAP@slidesonly
+\DeclareOption{notes}{\HAP@slidesonlyfalse\HAP@notestrue\HAP@notesonlyfalse}
+\DeclareOption{notesonly}{\global\HAP@notesonlytrue\HAP@slidesonlyfalse\HAP@notesfalse}
+\DeclareOption{slidesonly}{\global\HAP@slidesonlytrue\HAP@notesonlyfalse\HAP@notesfalse}
+\ExecuteOptions{slidesonly}
+\newif\ifHAP@toc
+\HAP@tocfalse
+\DeclareOption{toc}{\global\HAP@toctrue}
+\newif\ifHAP@highlight
+\HAP@highlightfalse
+\DeclareOption{highlight}{\global\HAP@highlighttrue}
+\newif\ifHAP@hlsections
+\HAP@hlsectionsfalse
+\DeclareOption{hlsections}{\global\HAP@hlsectionstrue}
+\newif\ifHAP@portrait
+\HAP@portraitfalse
+\DeclareOption{portrait}{\global\HAP@portraittrue}
+\newif\ifHAP@blackslide
+\HAP@blackslidefalse
+\DeclareOption{blackslide}{\global\HAP@blackslidetrue}
+\def\HAP@Style@chosen{HA}
+\DeclareOption*{\global\let\HAP@Style@chosen=\CurrentOption}
+\ProcessOptions\relax
+
+% Support for portrait slides
+\ifHAP@portrait
+  \slidewidth=150mm
+  \slideheight=222mm
+\else
+  \slidewidth=222mm
+  \slideheight=150mm
+\fi
+
+% Redefined command to save current settings, used to reset boxes
+% after using the notes environment
+\renewcommand{\NewSlideStyle}[4][11cm]{%
+  \setlength{\slideWidth}{#1}%
+  \global\pslongbox{posit@Box}{\rput[#2](#3)}%
+  \newslideframe{the#4}{\csname #4\endcsname{##1}}%
+  \slidepagestyle{GenericPageStyle}%
+  \slideframe{the#4}%
+  \gdef\current@anchor{#2}%
+  \gdef\current@pos{#3}%
+}
+
+% Definition to solve inconsistency in writing
+% definitions between seminar and latex.ltx
+\def\protected@write#1#2#3{%
+  \begingroup
+  #2%
+  \let\protect\noexpand
+  \immediate\normal@write#1{#3}%
+  \endgroup
+  \if@nobreak\ifvmode\nobreak\fi\fi%
+}%
+
+% Definitions for the notes environment
+\newcounter{notes@slide}
+\newcounter{truenotes@slide}
+\newcounter{temp@slide}
+\def\notes@frame#1{#1}
+\ifHAP@portrait
+  \def\notes@template{\NewSlideStyle[8.8cm]{tl}{-0.6,4}{notes@frame}}%
+\else
+  \def\notes@template{\NewSlideStyle[8.8cm]{tl}{1.2,4}{notes@frame}}%
+\fi
+\RequirePackage{xcomment}
+\RequirePackage{verbatim}
+\ifHAP@notes
+  \newwrite\@notesout\openout\@notesout\jobname.not\relax
+\fi
+\ifHAP@notesonly
+  \begingroup\InputIfFileExists{\jobname.not}{}{}\endgroup
+  \xcomment{notes}
+\fi
+\def\notes#1{%
+  \ifHAP@slidesonly\comment\else
+    \ifnum\theslide=\thetemp@slide
+      \stepcounter{notes@slide}%
+    \else
+      \setcounter{notes@slide}{1}%
+    \fi
+    \setcounter{temp@slide}{\theslide}%
+    \stepcounter{truenotes@slide}%
+    \ifHAP@notesonly\else
+      \protected@write\@notesout{}{\string\newlabel{notes@\thetruenotes@slide}{{}{\thetemp@slide-\thenotes@slide}{\relax }{}{}}}%
+    \fi
+    \xdef\temp@anchor{\current@anchor}%
+    \xdef\temp@pos{\current@pos}%
+    \notes@template\HAP@portraittrue
+    \begin{slide}[toc=,trans=Replace]{}\black
+    \rput[tl](0,1.5){\fontTitle{\black#1}}%
+    \ifHAP@notesonly
+      \rput[tc](4.4,-10.5){\realpageref{notes@\thetruenotes@slide}}%
+    \else
+      \rput[tc](4.4,-10.5){\thetemp@slide-\thenotes@slide}%
+    \fi
+  \fi
+}
+\def\endnotes{%
+  \ifHAP@slidesonly\endcomment\else
+    \end{slide}%
+    \global\pslongbox{posit@Box}{\rput[\temp@anchor](\temp@pos)}%
+    \gdef\current@anchor{\temp@anchor}%
+    \gdef\current@pos{\temp@pos}%
+    \addtocounter{slide}{-1}%
+  \fi
+}
+
+% Black slide
+\def\blackslide@frame#1{%
+  \psframe[fillstyle=solid,fillcolor=black](-3,-3)(13,13)%
+  {#1}%
+}
+\ifHAP@portrait
+  \def\blackslide@template{\NewSlideStyle[10cm]{tl}{-1.25,5.9}{blackslide@frame}}%
+\else
+  \def\blackslide@template{\NewSlideStyle[10cm]{tl}{-1.87,5.2}{blackslide@frame}}%
+\fi
+\ifHAP@blackslide\ifx\PPRPRV@Version\undefined
+  \def\@pdfstartpage{2}%
+  \AtBeginDocument{%
+    \blackslide@template
+    \begin{slide}[trans=Replace]{}%
+    {\black\hypertarget{blackslide}{\Acrobatmenu{GoBack}{\setlength{\fboxsep}{.5cm}\fbox{GoBack}}}}%
+    \end{slide}%
+    \addtocounter{slide}{-1}%
+    \HAPR@normalSlide
+  }
+\fi\fi
+
+% Altered bookmark definition
+\def\@addBookmarkOnSlide#1#2#3#4{%
+  \ifnum#2=0
+  \pdfstringdef\Hy@temp{#3}%
+  \pdfmark{pdfmark=/OUT,
+    Raw={/Page #4 
+      /View [ /XYZ null null null ]
+      /Title (\expandafter\strip@prefix\meaning\Hy@temp)}
+  }%
+  \else
+  \@tempoLimit=#2%
+  \advance\@tempoLimit by-1
+  \pdfstringdef\Hy@temp{#3}%
+  \pdfmark{pdfmark=/OUT,
+    Raw={/Count #1\number\@tempoLimit /Page #4 
+      /View [ /XYZ null null null ]
+      /Title (\expandafter\strip@prefix\meaning\Hy@temp)}
+  }%
+  \fi
+}
+
+% Section coding
+\newcounter{@sectionCounter}
+\newcounter{@tocSectionCounter}
+\newcounter{@secPageCounter}
+\def\tsection{\@ifstar{\@tsection{0}{2}}{\@tsection{0}{1}}}
+\def\@tsection#1#2#3{%
+  \stepcounter{@sectionCounter}%
+  \stepcounter{trueSlideCounter}%
+  \@contentsline{#2}{#3}{\thetrueSlideCounter}{\the@sectionCounter}%
+  \protected@write\@auxout{}{\string\gdef\string\tsectionstart@\roman{@sectionCounter}{\number\c@slide}}%
+  \stepcounter{@sectionCounter}%
+  \expandafter\ifx\csname tsectionstart@\@roman\c@@sectionCounter\endcsname\relax%
+    \@addBookmarkOnSlide{}{0}{#3}{\thetrueSlideCounter}%
+    \addtocounter{@sectionCounter}{-1}%
+  \else
+    \setcounter{@secPageCounter}{\csname tsectionstart@\@roman\c@@sectionCounter\endcsname}%
+    \addtocounter{@sectionCounter}{-1}%
+    \addtocounter{@secPageCounter}{-\csname tsectionstart@\@roman\c@@sectionCounter\endcsname}%
+    \if0#1%
+      \stepcounter{@secPageCounter}%
+    \fi
+    \@addBookmarkOnSlide{+}{\the@secPageCounter}{#3}{\thetrueSlideCounter}%
+  \fi
+  \addtocounter{trueSlideCounter}{-1}%
+}
+\AtEndDocument{%
+  \stepcounter{@sectionCounter}%
+  \protected@write\@auxout{}{\string\gdef\string\tsectionstart@\roman{@sectionCounter}{\number\c@slide}}%
+}
+
+% \part and \tsectionandpart commands
+\define@key{Pkeys}{template}{\def\@templatekey{#1}}
+\def\part{\@ifnextchar[\@part{\@part[]}}
+\def\@part[#1]#2{\@@part{0}[#1]{#2}}
+\def\tsectionandpart{\@ifstar
+  {\@ifnextchar[{\@@part{2}}{\@@part{2}[]}}%
+  {\@ifnextchar[{\@@part{1}}{\@@part{1}[]}}%
+}
+\def\@@part#1[#2]#3{%
+  \let\@templatekey\undefined
+  \let\@tockey\undefined
+  \setkeys{Pkeys}{#2}%
+  \ifx\@templatekey\undefined\def\@templatekey{slide}\fi
+  \if0#1%
+    \ifx\@tockey\undefined
+      \begin{\@templatekey}[#2,toc=#3]{}%
+    \else
+      \begin{\@templatekey}[#2]{}%
+    \fi
+  \else
+    \ifcase
+      \ifx\@tockey\undefined\@ne\fi
+      \ifx\@tockey\@empty\@ne\fi
+      \z@
+      \@tsection{1}{#1}{\@tockey}%
+    \else
+      \@tsection{1}{#1}{#3}%
+    \fi
+    \begin{\@templatekey}[#2,toc=]{}%
+  \fi
+  \vspace*{1.5cm}%
+  \begin{center}%
+    \fontTitle{#3}%
+  \end{center}%
+  \end{\@templatekey}%
+}
+
+% Provides table of contents commands.
+% Contentsline definitions offer highlight possibilities.
+\let\@tempentryb\undefined
+\newif\if@firstTocEntry
+\def\HAP@toctype{0}
+\AtEndDocument{%
+  \ifHAP@toc
+    \expandafter\newwrite\csname tf@toc\endcsname
+    \immediate\openout\csname tf@toc\endcsname\jobname.toc\relax%
+    \ifHAP@highlight\ifHAP@notesonly\else
+      \stepcounter{trueSlideCounter}%
+      \protected@write\@auxout{}{%
+        \string\@writefile{toc}{%
+        \string\pcontentsline{\@tempentrya}{\@tempentryb}{\@tempentryc}{\thetrueSlideCounter}{\@tempentryd}}%
+      }%
+  \fi\fi\fi
+}
+\def\pcontentsline#1#2#3#4#5{%
+  \if0#1%
+    \if1\HAP@toctype\else\@pcontentsline{#1}{#2}{#3}{#4}{#5}\fi
+  \else
+    \if2\HAP@toctype\setcounter{@tocSectionCounter}{#5}\else\@pcontentsline{#1}{#2}{#3}{#4}{#5}\fi
+  \fi
+}
+\def\@pcontentsline#1#2#3#4#5{%
+  \if0#1%
+    \if2\HAP@toctype
+      \def\@ptoctext{\HAP@tlineonly{#2}}%
+    \else
+      \def\@ptoctext{\HAP@tline{#2}}%
+    \fi
+  \else
+    \setcounter{@tocSectionCounter}{#5}%
+    \if1\HAP@toctype
+      \def\@ptoctext{\HAP@tsectiononly{#2}}%
+    \else
+      \def\@ptoctext{\HAP@tsection{#2}}%
+    \fi
+  \fi
+  \ifcase
+    \ifnum\the@sectionCounter=\the@tocSectionCounter\@ne\fi
+    \ifnum\the@tocSectionCounter=0\space\if0\HAP@toctype\@ne\else\ifnum\the@sectionCounter=0\space 1\fi\fi\fi\space
+    \if1#1\@ne\fi
+    \z@
+  \else
+    \if@firstTocEntry\else\if0#1\else\if1\HAP@toctype\else
+      \vskip\HAP@tsectionskip
+    \fi\fi\fi
+    \@firstTocEntryfalse
+    \ifHAP@highlight
+      \ifcase
+        \ifnum\thetrueSlideCounter<#3\space\else\ifnum\thetrueSlideCounter<#4\space 1\fi\fi\space
+        \ifHAP@hlsections\if0#1\space\else\ifnum\the@sectionCounter=\the@tocSectionCounter\space 1\fi\fi\fi\space
+        \z@
+        \pdfmark[\@ptoctext]{pdfmark=/LNK,
+          Raw={/Page #3 /Border [0 0 0] /View [/XYZ null null null]}}%
+        \par
+      \else
+        \psframe*[linecolor=HAP@hcolor](\HAP@hlca,\HAP@hlcb)(\HAP@hlcc,\HAP@hlcd)%
+        \pdfmark[{{\HAP@htcolor\@ptoctext}}]{pdfmark=/LNK,
+          Raw={/Page #3 /Border [0 0 0] /View [/XYZ null null null]}}%
+        \par
+      \fi
+    \else
+      \pdfmark[\@ptoctext]{pdfmark=/LNK,
+        Raw={/Page #4 /Border [0 0 0] /View [/XYZ null null null]}}%
+      \par
+    \fi
+  \fi
+}
+\def\@contentsline#1#2#3#4{%
+  \ifHAP@toc
+    \ifHAP@highlight
+      \ifx\@tempentryb\undefined\else
+        \protected@write\@auxout{}{%
+          \string\@writefile{toc}{%
+          \string\pcontentsline{\@tempentrya}{\@tempentryb}{\@tempentryc}{#3}{\@tempentryd}}}%
+      \fi
+      \gdef\@tempentrya{#1}%
+      \protected@xdef\@tempentryb{#2}%
+      \xdef\@tempentryc{#3}%
+      \xdef\@tempentryd{#4}%
+    \else
+      \if0#1%
+        \protected@write\@auxout{}{%
+          \string\@writefile{toc}{%
+          \string\pcontentsline{#1}{#2}{0}{#3}{}}}%
+      \else
+        \protected@write\@auxout{}{%
+          \string\@writefile{toc}{%
+          \string\pcontentsline{#1}{#2}{0}{#3}{\the@sectionCounter}}}%
+      \fi
+    \fi
+  \fi
+}
+\def\HAP@toc{%
+  \def\HAP@toctype{0}%
+  \setcounter{@tocSectionCounter}{0}%
+  \@firstTocEntrytrue
+  \fontToc{\InputIfFileExists{\jobname.toc}{}{}}%
+}
+\def\HAP@tsections{%
+  \def\HAP@toctype{1}%
+  \setcounter{@tocSectionCounter}{0}%
+  \@firstTocEntryfalse
+  \fontToc{\InputIfFileExists{\jobname.toc}{}{}}%
+}
+\def\HAP@tcontent{%
+  \def\HAP@toctype{2}%
+  \setcounter{@tocSectionCounter}{0}%
+  \@firstTocEntryfalse
+  \fontToc{\InputIfFileExists{\jobname.toc}{}{}}%
+}
+
+% New slide definitions to include optional toc string
+\RequirePackage{keyval}
+\define@key{Pkeys}{toc}{\def\@tockey{#1}}
+\define@key{Pkeys}{trans}{\def\@transkey{#1}}
+\def\SlideNormal{\@ifnextchar[\@SlideNormal{\@SlideNormal[]}}
+\def\@SlideNormal[#1]#2{%
+  \let\@tockey\undefined
+  \let\@transkey\undefined
+  \setkeys{Pkeys}{#1}%
+  \stepcounter{trueSlideCounter}%
+  \@ifundefined{@transkey}{%
+    \PDFtransition{\@defaultTransition}%
+  }{%
+    \PDFtransition{\@transkey}%
+  }%
+  \begin{slide@seminar}%
+    \ifHAP@portrait\landscapefalse\fi
+    \def\@tempa{#2}%
+    \ifx\@tempa\@empty
+      \ifx\@tockey\undefined\else
+        \ifx\@tockey\@empty\else
+          \@contentsline{0}{\@tockey}{\thetrueSlideCounter}{}%
+          \@addBookmarkOnSlide{}{0}{\@tockey}{\thetrueSlideCounter}%
+        \fi
+      \fi
+    \else
+      \slidetitle{#2}%
+      \@addBookmarkOnSlide{}{0}{#2}{\thetrueSlideCounter}%
+      \ifx\@tockey\undefined
+        \@contentsline{0}{#2}{\thetrueSlideCounter}{}%
+      \else
+        \ifx\@tockey\@empty\else
+          \@contentsline{0}{\@tockey}{\thetrueSlideCounter}{}%
+        \fi
+      \fi
+    \fi
+    \begin{posit@Box}%
+      \begin{minipage}{\slideWidth}%    
+        \begin{raggedright}%
+        \@DefMyItem%
+        \ifinColor\@fontTextColor\else\@fontTextBW\fi
+}
+\def\endSlideNormal{%
+      \par\end{raggedright}%
+    \end{minipage}\end{posit@Box}\end{slide@seminar}}
+% Slides in overlays
+\def\SlideOverlay{\@ifnextchar[\@SlideOverlay{\@SlideOverlay[]}}
+\def\@SlideOverlay[#1]#2{%
+  \let\@tockey\undefined
+  \let\@transkey\undefined
+  \setkeys{Pkeys}{#1}%
+  \ifDVItoPS
+      \begin{slide@seminar}%
+        \ifHAP@portrait\landscapefalse\fi
+        \slidetitle{#2}%
+        \begin{posit@Box}%
+          \begin{minipage}{\slideWidth}%
+            \begin{raggedright}%
+            \@DefMyItem%
+            \ifinColor\@fontTextColor\else\@fontTextBW\fi
+  \else % DVI -> PDF
+      \stepcounter{trueSlideCounter}%
+      \@ifundefined{@transkey}{%
+        \PDFtransition{\@defaultTransition}%
+      }{%
+        \PDFtransition{\@transkey}%
+      }%
+      \begin{slide@seminar}%
+        \ifHAP@portrait\landscapefalse\fi
+        \def\@tempa{#2}%
+        \ifx\@tempa\@empty
+        \else
+          \@ifundefined{@okForBookmark}{%
+            \gdef\@okForBookmark{}%
+            \ifcollapsedBookmarks
+              \@addBookmarkOnSlide{-}{\number\c@limitOverlays}{#2}{\thetrueSlideCounter}%
+            \else
+              \@addBookmarkOnSlide{+}{\number\c@limitOverlays}{#2}{\thetrueSlideCounter}%
+            \fi
+            \ifx\@tockey\undefined
+              \@contentsline{0}{#2}{\thetrueSlideCounter}{}%
+            \else
+              \ifx\@tockey\@empty\else
+                \@contentsline{0}{\@tockey}{\thetrueSlideCounter}{}%
+              \fi
+            \fi
+          }{\@addBookmarkOnSlide{}{0}{#2}{\thetrueSlideCounter}}%
+          \slidetitle{#2}%
+        \fi
+        \begin{posit@Box}%
+          \begin{minipage}{\slideWidth}% 
+            \begin{raggedright}%
+            \@DefMyItem%
+            \ifinColor\@fontTextColor\else\@fontTextBW\fi
+            {\overlay{1}}%
+  \fi
+}
+\def\endSlideOverlay{%
+  \ifDVItoPS
+        \par\end{raggedright}%
+      \end{minipage}\end{posit@Box}\end{slide@seminar}%
+  \else % DVI -> PDF
+        \par\end{raggedright}%
+      \end{minipage}\end{posit@Box}\end{slide@seminar}%
+        \addtocounter{slide}{-1}%
+  \fi
+}
+\let\slide=\SlideNormal
+\let\endslide=\endSlideNormal
+
+% Adapted itemize/enumerate environment that deletes the left
+% block indent for the list and is flushed left.
+\def\NoFrenchBabelItemize{\relax}
+\AtBeginDocument{
+\def\@Ptoodeep{%
+  \@latex@error{Items too deeply nested}\@ehd}
+\newlength\@LW
+\let\orig@item=\item
+\def\itemize{%
+  \global\let\cur@item=\item
+  \global\let\item=\orig@item
+  \ifnum\@itemdepth>2\@Ptoodeep\else
+    \advance\@itemdepth\@ne
+    \edef\@itemitem{labelitem\romannumeral\the\@itemdepth}%
+    \expandafter
+    \list
+      \csname\@itemitem\endcsname{%
+      \setlength{\itemsep}{\z@}%
+      \setlength{\parsep}{\z@}%
+      \setlength{\topsep}{\z@}%
+      \setlength{\partopsep}{\z@}%
+      \addtolength{\topsep}{-\parskip}%
+      \addtolength{\partopsep}{\parskip}%
+      \ifnum\@itemdepth<2
+        \settowidth{\@LW}{\labelitemi}%
+        \addtolength{\@LW}{\labelsep}%
+        \setlength{\leftmargin}{\@LW}%
+        \setlength{\itemsep}{.5ex}%
+      \fi\raggedright
+      \def\makelabel##1{\hss\llap{##1}}}%
+  \fi}
+\def\enditemize{\endlist\global\let\item=\cur@item}
+\def\enumerate{%
+  \global\let\cur@item=\item
+  \global\let\item=\orig@item
+  \ifnum \@enumdepth >\thr@@\@toodeep\else
+    \advance\@enumdepth\@ne
+    \edef\@enumctr{enum\romannumeral\the\@enumdepth}%
+    \expandafter
+    \list
+      \csname label\@enumctr\endcsname{%
+      \setlength{\itemsep}{\z@}%
+      \setlength{\parsep}{\z@}%
+      \setlength{\topsep}{\z@}%
+      \setlength{\partopsep}{\z@}%
+      \addtolength{\topsep}{-\parskip}%
+      \addtolength{\partopsep}{\parskip}%
+      \ifnum\@enumdepth<2
+        \settowidth{\@LW}{\labelenumi}%
+        \addtolength{\@LW}{\labelsep}%
+        \setlength{\leftmargin}{\@LW}%
+        \setlength{\itemsep}{.5ex}%
+      \fi\raggedright
+      \usecounter\@enumctr\def\makelabel##1{\hss\llap{##1}}}%
+  \fi}
+\def\endenumerate{\endlist\global\let\item=\cur@item}
+}
+
+% Itemstep and enumstep, can be nested.
+\newcounter{HAP@listdepth}
+\define@key{Ckeys}{sstart}{\def\HAP@Istart{#1}}
+\define@key{Ckeys}{stype}{\def\HAP@Itype{#1}}
+\define@key{Ckeys}{iacolor}{\def\HAP@Icolor{#1}}
+\def\itemstep{\@ifnextchar[{\@stepenv{0}}{\@stepenv{0}[]}}
+\def\enumstep{\@ifnextchar[{\@stepenv{1}}{\@stepenv{1}[]}}
+\def\@stepenv#1[#2]{%
+  \setkeys{Ckeys}{#2}%
+  \if0#1%
+    \begin{itemize}%
+  \else
+    \begin{enumerate}%
+  \fi
+    \ifnum\theHAP@listdepth=0
+      \setcounter{item@step}{\HAP@Istart}%
+      \addtocounter{item@step}{-1}%
+    \fi
+    \stepcounter{HAP@listdepth}%
+    \def\item{%
+      \stepcounter{item@step}%
+      \ifcase\HAP@Itype
+        \FromSlide{\theitem@step}%
+      \or
+        \FromSlide{\theitem@step}%
+        \ifnum\theoverlaysCount=\theitem@step
+          \HAP@textc
+        \else
+          \csname\HAP@Icolor\endcsname
+        \fi
+      \or
+        \ifnum\theoverlaysCount=\theitem@step
+          \HAP@textc
+        \else
+          \csname\HAP@Icolor\endcsname
+        \fi
+      \fi
+      \orig@item
+    }%
+}
+\def\enditemstep{\end@stepenv{0}}
+\def\endenumstep{\end@stepenv{1}}
+\def\end@stepenv#1{%
+  \if0#1%
+    \end{itemize}%
+  \else
+    \end{enumerate}%
+  \fi
+  \addtocounter{HAP@listdepth}{-1}%
+  \ifnum\theHAP@listdepth=0
+    \setcounter{item@step}{0}%
+  \fi
+}
+
+% Possibility to include title slide into toc and/or bookmarks
+\renewcommand{\maketitle}[1][]{%
+  %% Tests whether the 'french' style from B. Gaulle is loaded
+  \expandafter\ifx\csname frenchTeXmods\endcsname\relax%
+  \else
+  %% Is it an old version affected by the bug.
+  \ifx\@soORI\undefined
+  \PackageWarning{prosper}{This page is intentionnally left blank to overcome an incompatibility bug in the seminar class with the old (< 1999/11/23) B. Gaulle's 'french' package.}
+  \begin{center}
+    {\black\small
+  \textsf{prosper} class: page intentionnally left blank to overcome an incompatibility bug between B. Gaulle 'french' package and the seminar class.}%
+  \end{center}
+  \clearpage \setcounter{page}{0}%
+  \fi\fi
+  \begin{slide}[#1]{}
+    \ptsize{10}%
+    \begin{center}%
+    \@titleSpacing\par
+    \normalfont
+    {\ifinColor\@fontTitleColor\else\@fontTitleBW\fi\@Title\par}%
+    \ifx\@Subtitle\@empty\else
+    {\ifinColor\@fontSubtitleColor\else\@fontSubtitleBW\fi\@Subtitle\par}
+    \fi
+    \vskip2em
+    {\ifinColor\@fontAuthorColor\else\@fontAuthorBW\fi\begin{tabular}[t]{c}\@Author\end{tabular}\par}
+    \vfill
+    \end{center}
+  \end{slide}
+}
+
+% Patch by Mathieu Goutelle to solve bug in equation, table and figure numbering on overlays.
+\newcounter{old@equation}
+\newcounter{old@figure}
+\newcounter{old@table}
+\long\def\overlays#1#2{%
+  \bgroup  
+  \aftergroup\@cleanupOverlay
+  \global\InOverlaystrue
+  \setcounter{limitOverlays}{#1}%
+  \setcounter{overlaysCount}{1}%
+  \ifDVItoPS
+    #2
+  \else
+    \begin{Overlays}%
+    \bgroup  
+    \loop 
+      \@everyOverlay
+      \setcounter{old@equation}{\value{equation}}%
+      \setcounter{old@table}{\value{table}}%
+      \setcounter{old@figure}{\value{figure}}%
+      #2
+    \ifnum\value{overlaysCount}<\value{limitOverlays}{%
+      \stepcounter{overlaysCount}%
+      \setcounter{equation}{\theold@equation}%
+      \setcounter{table}{\theold@table}%
+      \setcounter{figure}{\theold@figure}%
+    }%
+    \repeat
+    \egroup
+    \end{Overlays}%
+  \fi
+  \egroup
+}
+
+% Additional font definitions for LeftFoot, RightFoot, Author, Institution and E-mail
+\def\@fontLFColor{\@fontTextColor\fontsize{5pt}{5pt}\selectfont}
+\def\@fontLFBW{\@fontTextBW\fontsize{5pt}{5pt}\selectfont}
+\newcommand{\FontLeftFoot}[2]{%
+  \gdef\@fontLFColor{#1}%
+  \gdef\@fontLFBW{#2}}
+\newcommand{\fontLeftFoot}[1]{{\ifinColor\@fontLFColor\else\@fontLFBW\fi#1}}
+
+\def\@fontRFColor{\@fontTextColor\fontsize{5pt}{5pt}\selectfont}
+\def\@fontRFBW{\@fontTextBW\fontsize{5pt}{5pt}\selectfont}
+\newcommand{\FontRightFoot}[2]{%
+  \gdef\@fontRFColor{#1}%
+  \gdef\@fontRFBW{#2}}
+\newcommand{\fontRightFoot}[1]{{\ifinColor\@fontRFColor\else\@fontRFBW\fi#1}}
+
+\def\@fontAuthorColor{\@fontTextColor}
+\def\@fontAuthorBW{\@fontTextBW}
+\newcommand{\FontAuthor}[2]{%
+  \gdef\@fontAuthorColor{#1}%
+  \gdef\@fontAuthorBW{#2}}
+\newcommand{\fontAuthor}[1]{{\ifinColor\@fontAuthorColor\else\@fontAuthorBW\fi#1}}
+
+\def\@fontInstColor{\@fontTextColor\fontsize{7pt}{7pt}\selectfont}
+\def\@fontInstBW{\@fontTextBW\fontsize{7pt}{7pt}\selectfont}
+\newcommand{\FontInst}[2]{%
+  \gdef\@fontInstColor{#1}%
+  \gdef\@fontInstBW{#2}}
+\newcommand{\fontInst}[1]{{\ifinColor\@fontInstColor\else\@fontInstBW\fi#1}}
+\let\institution\fontInst
+
+\def\@fontEmailColor{\@fontTextColor\fontsize{7pt}{7pt}\selectfont}
+\def\@fontEmailBW{\@fontTextBW\fontsize{7pt}{7pt}\selectfont}
+\newcommand{\FontEmail}[2]{%
+  \gdef\@fontEmailColor{#1}%
+  \gdef\@fontEmailBW{#2}}
+\newcommand{\fontEmail}[1]{{\ifinColor\@fontEmailColor\else\@fontEmailBW\fi#1}}
+\let\email\fontEmail
+
+\def\@fontTocColor{\@fontTextColor\fontsize{4pt}{6pt}\selectfont}
+\def\@fontTocBW{\@fontTextBW\fontsize{4pt}{6pt}\selectfont}
+\newcommand{\FontToc}[2]{%
+  \gdef\@fontTocColor{#1}%
+  \gdef\@fontTocBW{#2}}
+\newcommand{\fontToc}[1]{{\ifinColor\@fontTocColor\else\@fontTocBW\fi#1}}
+
+% New code for footers independent of seminar
+% to gain better control over their behavior
+\renewpagestyle{GenericPageStyle}{}{}
+\newcommand{\LeftFoot}[1]{\gdef\@leftfoot{#1}}
+\newcommand{\RightFoot}[1]{\gdef\@rightfoot{#1}}
+\newcommand{\HAP@PutLF}[2]{\@ifundefined{@leftfoot}{}{%
+  \rput[#1](#2){%
+    \parbox[t]{\slidewidth}{\fontLeftFoot{\@leftfoot}}}%
+  }%
+}
+\newcommand{\HAP@PutRF}[2]{\@ifundefined{@rightfoot}{}{%
+  \rput[#1](#2){%
+    \parbox[t]{\slidewidth}{\hfill\fontRightFoot{%
+      \ifisDraft
+        {\textbf{\jobname.tex}~--~\@Title~--~\@Author~--~\number\day/\number\month/\number\year~--~\timenow~--~p.~\thepage\ifallPages/\realpageref{last@page}\fi}%
+      \else
+        \ifshowVersion%
+          {\textbf{\jobname.tex}~--~\@Title~--~\@Author~--~\number\day/\number\month/\number\year~--~\timenow~--~p.~\thepage\ifallPages/\realpageref{last@page}\fi}%
+        \else
+          {\@rightfoot~--~p.~\thepage\ifallPages/\realpageref{last@page}\fi}%
+        \fi
+      \fi
+      }}%
+    }%
+  }%
+}
+
+% Dualslide definitions
+\def\HAP@maxdim#1#2{\ifdim#1>#2#1\else#2\fi}
+\newbox\HAP@tempboxL
+\newbox\HAP@tempboxR
+\newlength{\HAP@lcolwidth}
+\newlength{\HAP@rcolwidth}
+\newlength{\HAP@frsep}
+\newlength{\HAP@colsep}
+\newlength{\HAP@topsep}
+\newlength{\HAP@bottomsep}
+\newlength{\HAP@indent}
+\newlength{\@slide@tempa}
+\newlength{\@slide@tempb}
+\newlength{\@slide@tempc}
+\newlength{\@slide@tempd}
+\define@key{Fkeys}{lineheight}{\def\HAP@lineheight{#1}}
+\define@key{Fkeys}{lfrheight}{\def\HAP@lfrheight{#1}}
+\define@key{Fkeys}{rfrheight}{\def\HAP@rfrheight{#1}}
+\define@key{Fkeys}{frsep}{\setlength{\HAP@frsep}{#1}}
+\define@key{Fkeys}{colsep}{\setlength{\HAP@colsep}{#1}}
+\define@key{Fkeys}{lcolwidth}{\setlength{\HAP@lcolwidth}{#1}}
+\define@key{Fkeys}{rcolwidth}{\setlength{\HAP@rcolwidth}{#1}}
+\define@key{Fkeys}{topsep}{\setlength{\HAP@topsep}{#1}}
+\define@key{Fkeys}{bottomsep}{\setlength{\HAP@bottomsep}{#1}}
+\define@key{Fkeys}{indent}{\setlength{\HAP@indent}{#1}}
+\def\dualslide{\@ifnextchar[\@dualslide{\@@@dualslide[][][]}}
+\def\@dualslide[#1]{\@ifnextchar[{\@@dualslide[#1]}{\@@@dualslide[#1][#1][#1]}}
+\def\@@dualslide[#1][#2]{\@ifnextchar[{\@@@dualslide[#1][#2]}{\@@@dualslide[#1][#2][#1]}}
+\long\def\@@@dualslide[#1][#2][#3]#4#5#6{%
+  \setlength{\HAP@frsep}{1.5mm}%
+  \setlength{\HAP@colsep}{.06\linewidth}%
+  \setlength{\HAP@lcolwidth}{.47\linewidth}%
+  \setlength{\HAP@rcolwidth}{.47\linewidth}%
+  \setlength{\HAP@topsep}{0cm}%
+  \setlength{\HAP@bottomsep}{0cm}%
+  \setlength{\HAP@indent}{0cm}%
+  \setkeys{Fkeys}{#4}%
+  \sbox\HAP@tempboxL{\begin{minipage}{\HAP@lcolwidth}#5\end{minipage}}%
+  \setlength{\@slide@tempc}{\the\ht\HAP@tempboxL}%
+  \addtolength{\@slide@tempc}{\the\dp\HAP@tempboxL}%
+  \sbox\HAP@tempboxR{\begin{minipage}{\HAP@rcolwidth}#6\end{minipage}}%
+  \setlength{\@slide@tempd}{\the\ht\HAP@tempboxR}%
+  \addtolength{\@slide@tempd}{\the\dp\HAP@tempboxR}%
+  \setlength{\@slide@tempc}{\HAP@maxdim{\@slide@tempc}{\@slide@tempd}}%
+  \ifx\HAP@lfrheight\undefined\else
+    \setlength{\@slide@tempc}{\HAP@maxdim{\HAP@lfrheight}{\@slide@tempc}}%
+  \fi
+  \ifx\HAP@lineheight\undefined\else
+    \setlength{\@slide@tempc}{\HAP@maxdim{\HAP@lineheight}{\@slide@tempc}}%
+  \fi
+  \ifx\HAP@rfrheight\undefined\else
+    \setlength{\@slide@tempc}{\HAP@maxdim{\HAP@rfrheight}{\@slide@tempc}}%
+  \fi
+  \pspicture(-\HAP@indent,\HAP@topsep)(\linewidth,-\@slide@tempc)%
+  \psset{unit=1pt,linewidth=.25pt,linecolor=HAP@framecolor}%
+  \setlength{\@slide@tempa}{\HAP@lcolwidth}%
+  \addtolength{\@slide@tempa}{\HAP@frsep}%
+  \ifx\HAP@lfrheight\undefined\else
+    \psframe[#1](-\HAP@frsep,\HAP@frsep)(\@slide@tempa,-\HAP@lfrheight)%
+  \fi
+  \rput[tl](0,0){\usebox{\HAP@tempboxL}}%
+  \setlength{\@slide@tempa}{\HAP@lcolwidth}%
+  \addtolength{\@slide@tempa}{.5\HAP@colsep}%
+  \ifx\HAP@lineheight\undefined\else
+    \psline[#2](\@slide@tempa,\HAP@frsep)(\@slide@tempa,-\HAP@lineheight)%
+  \fi
+  \addtolength{\@slide@tempa}{.5\HAP@colsep}%
+  \addtolength{\@slide@tempa}{-\HAP@frsep}%
+  \setlength{\@slide@tempb}{\@slide@tempa}%
+  \addtolength{\@slide@tempb}{\HAP@rcolwidth}%
+  \addtolength{\@slide@tempb}{2\HAP@frsep}%
+  \ifx\HAP@rfrheight\undefined\else
+    \psframe[#3](\@slide@tempa,\HAP@frsep)(\@slide@tempb,-\HAP@rfrheight)%
+  \fi
+  \setlength{\@slide@tempb}{\@slide@tempa}%
+  \addtolength{\@slide@tempb}{\HAP@frsep}%
+  \rput[tl](\@slide@tempb,0){\usebox{\HAP@tempboxR}}%
+  \endpspicture\par
+}
+
+% hiddenitem and topbl
+\def\hiddenitem{\stepcounter{item@step}}
+\def\topbl#1{\vtop{\vskip-1ex\hbox{#1}}}
+
+% Some default style definitions, can be changed in templates
+\def\HAPsetup#1{\setkeys{Ckeys}{#1}}
+\HAPsetup{sstart=1,stype=0,iacolor=lightgray}
+\def\NormalSlideNav#1{\gdef\HAP@NSNav{#1}}
+\def\TitleSlideNav#1{\gdef\HAP@TSNav{#1}}
+\hypersetup{pdfpagescrop={0 0 595 840}}
+\AtBeginDocument{\def\@pdfcreator{LaTeX with hyperref and HA-prosper packages}}
+\ptsize{10}
+
+% Unload \slidetitle, load style definitions
+\let\slidetitle\undefined
+\IfFileExists{HAP\HAP@Style@chosen.sty}{%
+  \RequirePackage{HAP\HAP@Style@chosen}%
+}{\PackageError{HA-prosper}{unknown HA-prosper style file: HAP\HAP@Style@chosen.sty}%
+  {Sorry, no additional help}}
+
+% Additional standard slide environments based on custom templates
+\ifx\HAPR@normalSlide\undefined
+  \PackageError{HA-prosper}{HA-prosper normal slide is not defined in your template}%
+  {Check that your template HAP\HAP@Style@chosen.sty supports normal slides and that it is up to date}%
+\else
+  \HAPR@normalSlide
+  \ifx\HAPR@wideSlide\undefined
+  \else
+    \def\wideslide{\@ifnextchar[\@wideslide{\@wideslide[]}}%
+    \def\@wideslide[#1]#2{\setkeys{Pkeys}{#1}%
+      \HAPR@wideSlide
+      \begin{slide}[#1]{#2}%
+    }%
+    \def\endwideslide{\end{slide}\HAPR@normalSlide}%
+  \fi
+  \ifx\HAPR@emptySlide\undefined
+  \else
+    \def\emptyslide{\@ifnextchar[\@emptyslide{\@emptyslide[]}}%
+    \def\@emptyslide[#1]#2{\setkeys{Pkeys}{#1}%
+      \HAPR@emptySlide
+      \begin{slide}[#1]{#2}%
+    }%
+    \def\endemptyslide{\end{slide}\HAPR@normalSlide}%
+  \fi
+\fi
+
+% Change \maketitle if title and normal slides available
+\ifcase
+  \ifx\HAPR@normalSlide\undefined\@ne\fi
+  \ifx\HAPR@titleSlide\undefined\@ne\fi
+  \z@
+  \let\old@maketitle=\maketitle
+  \def\maketitle{\@ifnextchar[\makePtitle{\makePtitle[]}}%
+  \newcommand{\makePtitle}[1][]{\HAPR@titleSlide\old@maketitle[#1]\HAPR@normalSlide}%
+\fi
+
+% Default definitions if not defined by templates
+\ifx\HAP@tline\undefined\def\HAP@tline#1{#1}\fi
+\ifx\HAP@tlineonly\undefined\def\HAP@tlineonly#1{#1}\fi
+\ifx\HAP@tsection\undefined\def\HAP@tsection#1{#1}\fi
+\ifx\HAP@tsectiononly\undefined\def\HAP@tsectiononly#1{#1}\fi
+\ifx\HAP@tsectionskip\undefined\def\HAP@tsectionskip{.5em}\fi
+\ifx\HAP@textc\undefined\newrgbcolor{HAP@textc}{0 0 0}\fi
+\ifx\HAP@hcolor\undefined\newrgbcolor{HAP@hcolor}{0 0 0}\fi
+\ifx\HAP@htcolor\undefined\newrgbcolor{HAP@htcolor}{1 1 1}\fi
+\ifx\HAP@framecolor\undefined\newrgbcolor{HAP@framecolor}{0 0 0}\fi
+\ifx\HAP@hlca\undefined\def\hlca{-.05}\fi
+\ifx\HAP@hlcb\undefined\def\hlcb{-.05}\fi
+\ifx\HAP@hlcc\undefined\def\hlcc{2}\fi
+\ifx\HAP@hlcd\undefined\def\hlcd{.15}\fi
+
+\endinput
